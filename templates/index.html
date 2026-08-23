@@ -7,24 +7,19 @@
 
     <title>Solstice Events Check-In</title>
 
-    
     <link
         rel="stylesheet"
         href="{{ url_for('static', filename='style.css') }}"
     >
 </head>
 
-
 <body>
 
     <div class="kiosk">
 
         <div class="header">
-
             <h1>Solstice Events</h1>
-
             <p>Conference Check-In</p>
-
         </div>
 
 
@@ -34,23 +29,18 @@
                 Attendee ID / QR Code
             </label>
 
-
             <input
                 id="attendeeId"
                 type="text"
                 placeholder="Example: ATT-001"
             >
 
-
             <button onclick="checkIn()">
                 Check In
             </button>
 
-
             <div id="result" class="result">
-
                 Enter an attendee ID to begin.
-
             </div>
 
         </div>
@@ -84,7 +74,6 @@
 
         async function checkIn() {
 
-
             const attendeeId =
                 document
                     .getElementById("attendeeId")
@@ -92,13 +81,9 @@
                     .trim()
                     .toUpperCase();
 
-
-        
             const result =
                 document.getElementById("result");
 
-
-            
 
             if (!attendeeId) {
 
@@ -115,11 +100,9 @@
 
             try {
 
-
                 const response = await fetch(
                     "/check-in",
                     {
-
                         method: "POST",
 
                         headers: {
@@ -127,33 +110,21 @@
                         },
 
                         body: JSON.stringify({
-
                             attendeeId: attendeeId
-
                         })
-
                     }
                 );
 
 
-    
-
                 const data = await response.json();
-
 
 
                 if (response.ok) {
 
-
-
-
                     if (data.status === "PENDING") {
 
                         result.innerHTML = `
-
-                            <strong>
-                                ${data.name}
-                            </strong>
+                            <strong>${data.name}</strong>
 
                             <br><br>
 
@@ -163,57 +134,64 @@
 
                             ${data.message}
 
+                            <br><br>
+
+                            Waiting for printer confirmation...
+                        `;
+
+
+                        // Start checking the attendee's
+                        // latest status every 2 seconds.
+                        watchStatus(
+                            attendeeId,
+                            data.name
+                        );
+                    }
+
+                }
+
+                else {
+
+                    if (data.status === "PENDING") {
+
+                        result.innerHTML = `
+                            ⚠️ ${data.name}
+                            already has a badge print
+                            in progress.
+
+                            <br><br>
+
+                            Current status:
+                            ${data.status}
                         `;
 
                     }
-
-
 
                     else if (data.status === "CHECKED_IN") {
 
                         result.innerHTML = `
-
-                            <strong>
-                                ${data.name}
-                            </strong>
+                            ✅ ${data.name}
+                            is already checked in.
 
                             <br><br>
 
-                            ✅ CHECKED IN
+                            No additional badge
+                            was printed.
+                        `;
 
-                            <br>
+                    }
 
-                            Badge printed successfully.
+                    else {
 
+                        result.innerHTML = `
+                            ⚠️ ${data.message}
                         `;
 
                     }
 
                 }
 
-
-
-                else {
-
-                    result.innerHTML = `
-
-                        ⚠️ ${data.message}
-
-                        <br>
-
-                        ${
-                            data.status
-                                ? "Current status: " + data.status
-                                : ""
-                        }
-
-                    `;
-
-                }
-
             }
-
-
 
             catch (error) {
 
@@ -226,8 +204,75 @@
 
         }
 
-    </script>
 
+
+        // ------------------------------------------------
+        // WATCH ATTENDEE STATUS
+        // ------------------------------------------------
+
+        async function watchStatus(attendeeId, attendeeName) {
+
+            const result =
+                document.getElementById("result");
+
+
+            const timer = setInterval(
+                async function () {
+
+                    try {
+
+                        const response = await fetch(
+                            `/attendees/${attendeeId}`
+                        );
+
+
+                        const attendee =
+                            await response.json();
+
+
+                        if (
+                            attendee.status ===
+                            "CHECKED_IN"
+                        ) {
+
+                            clearInterval(timer);
+
+
+                            result.innerHTML = `
+                                <strong>
+                                    ${attendeeName}
+                                </strong>
+
+                                <br><br>
+
+                                ✅ CHECKED IN
+
+                                <br>
+
+                                Badge printed successfully.
+                            `;
+
+                        }
+
+                    }
+
+                    catch (error) {
+
+                        console.error(
+                            "Status check failed:",
+                            error
+                        );
+
+                    }
+
+                },
+
+                2000
+            );
+
+        }
+
+    </script>
 
 </body>
 
