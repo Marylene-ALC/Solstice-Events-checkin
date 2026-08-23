@@ -7,18 +7,26 @@
 
     <title>Solstice Events Check-In</title>
 
-    <link rel="stylesheet"
-          href="{{ url_for('static', filename='style.css') }}">
+    
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
 </head>
+
 
 <body>
 
     <div class="kiosk">
 
         <div class="header">
+
             <h1>Solstice Events</h1>
+
             <p>Conference Check-In</p>
+
         </div>
+
 
         <div class="checkin-card">
 
@@ -26,29 +34,46 @@
                 Attendee ID / QR Code
             </label>
 
+
             <input
                 id="attendeeId"
                 type="text"
                 placeholder="Example: ATT-001"
             >
 
+
             <button onclick="checkIn()">
                 Check In
             </button>
 
+
             <div id="result" class="result">
+
                 Enter an attendee ID to begin.
+
             </div>
 
         </div>
+
 
         <div class="test-attendees">
 
             <h3>Test Attendees</h3>
 
-            <p>ATT-001 — Maya Chen</p>
-            <p>ATT-002 — Daniel Okafor</p>
-            <p>ATT-003 — Sofia Laurent</p>
+            <p>
+                <strong>ATT-001</strong>
+                — Maya Chen
+            </p>
+
+            <p>
+                <strong>ATT-002</strong>
+                — Daniel Okafor
+            </p>
+
+            <p>
+                <strong>ATT-003</strong>
+                — Sofia Laurent
+            </p>
 
         </div>
 
@@ -59,15 +84,21 @@
 
         async function checkIn() {
 
-            const attendeeId =
-                document.getElementById("attendeeId")
-                .value
-                .trim()
-                .toUpperCase();
 
+            const attendeeId =
+                document
+                    .getElementById("attendeeId")
+                    .value
+                    .trim()
+                    .toUpperCase();
+
+
+        
             const result =
                 document.getElementById("result");
 
+
+            
 
             if (!attendeeId) {
 
@@ -79,61 +110,124 @@
 
 
             result.innerHTML =
-                "Printing badge...";
+                "Submitting print request...";
 
 
             try {
 
-                const response = await fetch("/check-in", {
 
-                    method: "POST",
+                const response = await fetch(
+                    "/check-in",
+                    {
 
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
+                        method: "POST",
 
-                    body: JSON.stringify({
-                        attendeeId: attendeeId
-                    })
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
 
-                });
+                        body: JSON.stringify({
 
+                            attendeeId: attendeeId
+
+                        })
+
+                    }
+                );
+
+
+    
 
                 const data = await response.json();
 
 
+
                 if (response.ok) {
 
-                    result.innerHTML = `
-                        <strong>${data.name}</strong>
-                        <br>
-                        ✅ CHECKED IN
-                        <br>
-                        ${data.message}
-                    `;
+
+
+
+                    if (data.status === "PENDING") {
+
+                        result.innerHTML = `
+
+                            <strong>
+                                ${data.name}
+                            </strong>
+
+                            <br><br>
+
+                            ⏳ PENDING
+
+                            <br>
+
+                            ${data.message}
+
+                        `;
+
+                    }
+
+
+
+                    else if (data.status === "CHECKED_IN") {
+
+                        result.innerHTML = `
+
+                            <strong>
+                                ${data.name}
+                            </strong>
+
+                            <br><br>
+
+                            ✅ CHECKED IN
+
+                            <br>
+
+                            Badge printed successfully.
+
+                        `;
+
+                    }
 
                 }
+
+
 
                 else {
 
                     result.innerHTML = `
+
                         ⚠️ ${data.message}
+
+                        <br>
+
+                        ${
+                            data.status
+                                ? "Current status: " + data.status
+                                : ""
+                        }
+
                     `;
 
                 }
 
             }
 
+
+
             catch (error) {
 
+                console.error(error);
+
                 result.innerHTML =
-                    "Something went wrong.";
+                    "Something went wrong while contacting the server.";
 
             }
 
         }
 
     </script>
+
 
 </body>
 
