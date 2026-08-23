@@ -1,0 +1,104 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: Arial, sans-serif;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    background: #f3f4f6;
+}
+
+.kiosk {
+    width: 460px;
+
+    background: white;
+
+    border-radius: 18px;
+
+    padding: 32px;
+
+    box-shadow: 0 15px 45px rgba(0, 0, 0, 0.12);
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.header h1 {
+    margin-bottom: 5px;
+}
+
+.header p {
+    margin-top: 0;
+    color: #666;
+}
+
+.checkin-card label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+}
+
+.checkin-card input {
+    width: 100%;
+
+    padding: 14px;
+
+    border: 1px solid #ccc;
+    border-radius: 8px;
+
+    font-size: 16px;
+
+    margin-bottom: 15px;
+}
+
+.checkin-card button {
+    width: 100%;
+
+    padding: 14px;
+
+    border: none;
+    border-radius: 8px;
+
+    font-size: 16px;
+    font-weight: bold;
+
+    cursor: pointer;
+}
+
+.result {
+    margin-top: 22px;
+
+    min-height: 80px;
+
+    padding: 18px;
+
+    border-radius: 8px;
+
+    background: #f7f7f7;
+
+    text-align: center;
+
+    line-height: 1.7;
+}
+
+.test-attendees {
+    margin-top: 30px;
+
+    padding-top: 20px;
+
+    border-top: 1px solid #ddd;
+
+    color: #555;
+}
+
+.test-attendees h3 {
+    margin-top: 0;
+}

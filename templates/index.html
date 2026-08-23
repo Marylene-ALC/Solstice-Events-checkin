@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Solstice Events Check-In</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+    <div class="kiosk">
+
+        <div class="header">
+            <h1>Solstice Events</h1>
+            <p>Conference Check-In</p>
+        </div>
+
+        <div class="checkin-card">
+
+            <label for="attendeeId">
+                Attendee ID / QR Code
+            </label>
+
+            <input
+                id="attendeeId"
+                type="text"
+                placeholder="Example: ATT-001"
+            >
+
+            <button onclick="checkIn()">
+                Check In
+            </button>
+
+            <div id="result" class="result">
+                Enter an attendee ID to begin.
+            </div>
+
+        </div>
+
+        <div class="test-attendees">
+
+            <h3>Test Attendees</h3>
+
+            <p>ATT-001 — Maya Chen</p>
+            <p>ATT-002 — Daniel Okafor</p>
+            <p>ATT-003 — Sofia Laurent</p>
+
+        </div>
+
+    </div>
+
+
+    <script>
+
+        async function checkIn() {
+
+            const attendeeId =
+                document.getElementById("attendeeId")
+                .value
+                .trim()
+                .toUpperCase();
+
+            const result =
+                document.getElementById("result");
+
+
+            if (!attendeeId) {
+
+                result.innerHTML =
+                    "Please enter an attendee ID.";
+
+                return;
+            }
+
+
+            result.innerHTML =
+                "Printing badge...";
+
+
+            try {
+
+                const response = await fetch("/check-in", {
+
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        attendeeId: attendeeId
+                    })
+
+                });
+
+
+                const data = await response.json();
+
+
+                if (response.ok) {
+
+                    result.innerHTML = `
+                        <strong>${data.name}</strong>
+                        <br>
+                        ✅ CHECKED IN
+                        <br>
+                        ${data.message}
+                    `;
+
+                }
+
+                else {
+
+                    result.innerHTML = `
+                        ⚠️ ${data.message}
+                    `;
+
+                }
+
+            }
+
+            catch (error) {
+
+                result.innerHTML =
+                    "Something went wrong.";
+
+            }
+
+        }
+
+    </script>
+
+</body>
+
+</html>
