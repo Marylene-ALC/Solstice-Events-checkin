@@ -26,6 +26,20 @@ The system also prevents duplicate badge printing while an attendee is pending o
 
 The attendee IDs represent the values that would normally be read from the attendees' QR codes. QR scanning is simulated by manually entering the ID.
 
+## QR Code
+
+Each attendee has a QR code linked to their unique attendee ID.
+
+For this prototype, the attendee ID is entered manually first. Once the attendee is found, their QR code is displayed on the screen.
+
+For example:
+
+- `ATT-001` → Maya Chen
+- `ATT-002` → Daniel Okafor
+- `ATT-003` → Sofia Laurent
+
+The QR code contains the attendee's ID and represents the QR code that would be used for the attendee at the event.
+
 ## Run the Project
 
 Install the requirements:
