@@ -7,6 +7,7 @@ import json
 import urllib.request
 import threading
 import time
+import os
 
 
 app = Flask(__name__)
@@ -33,7 +34,10 @@ print_queue = []
 jobs = {}
 
 SECRET = b"my-webhook-secret"
-
+BASE_URL = os.environ.get(
+    "BASE_URL",
+    "http://127.0.0.1:5000"
+)
 
 @app.route("/")
 def home():
@@ -174,7 +178,7 @@ def simulate_printer(job_id):
 
 
     webhook_request = urllib.request.Request(
-        "http://127.0.0.1:5000/webhook",
+        f"{BASE_URL}/webhook",
         data=body,
         method="POST"
     )
@@ -242,7 +246,7 @@ def process_next_job():
 
 
     webhook_request = urllib.request.Request(
-        "http://127.0.0.1:5000/webhook",
+        f"{BASE_URL}/webhook",
         data=body,
         method="POST"
     )
@@ -327,7 +331,7 @@ def process_specific_job(job_id):
 
 
     webhook_request = urllib.request.Request(
-        "http://127.0.0.1:5000/webhook",
+        f"{BASE_URL}/webhook",
         data=body,
         method="POST"
     )
