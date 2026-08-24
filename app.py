@@ -5,15 +5,11 @@ import hmac
 import hashlib
 import json
 import urllib.request
+import threading
+import time
 
 
 app = Flask(__name__)
-
-
-# --------------------------------------------------
-# ATTENDEES
-# --------------------------------------------------
-
 attendees = {
     "ATT-001": {
         "name": "Maya Chen",
@@ -32,32 +28,17 @@ attendees = {
 }
 
 
-# --------------------------------------------------
-# QUEUE AND JOB STORAGE
-# --------------------------------------------------
-
-# Simulated message queue
 print_queue = []
 
-# Connects a job ID to an attendee ID
 jobs = {}
 
-# Secret used to sign and verify webhooks
 SECRET = b"my-webhook-secret"
 
-
-# --------------------------------------------------
-# HOME PAGE
-# --------------------------------------------------
 
 @app.route("/")
 def home():
     return render_template("index.html")
 
-
-# --------------------------------------------------
-# CHECK IN
-# --------------------------------------------------
 
 @app.route("/check-in", methods=["POST"])
 def check_in():
@@ -67,7 +48,6 @@ def check_in():
     attendee_id = data.get("attendeeId")
 
 
-    # Check that attendee exists
     if attendee_id not in attendees:
 
         return jsonify({
@@ -79,33 +59,32 @@ def check_in():
     attendee = attendees[attendee_id]
 
 
-    # --------------------------------------------------
-    # DUPLICATE PROTECTION
-    # --------------------------------------------------
-
-    # Do not create another badge if:
-    #
-    # 1. A print job is already pending
-    # OR
-    # 2. The attendee is already checked in
-
-    if attendee["status"] in ["PENDING", "CHECKED_IN"]:
+    # Duplicate protection
+    if attendee["status"] == "PENDING":
 
         return jsonify({
             "success": False,
             "name": attendee["name"],
-            "status": attendee["status"],
+            "status": "PENDING",
             "message": (
-                f'{attendee["name"]} already has a '
-                'check-in in progress or completed.'
+                f'{attendee["name"]} already has a badge print in progress.'
             )
         }), 409
 
 
-    # --------------------------------------------------
-    # CREATE PRINT JOB
-    # --------------------------------------------------
+    if attendee["status"] == "CHECKED_IN":
 
+        return jsonify({
+            "success": False,
+            "name": attendee["name"],
+            "status": "CHECKED_IN",
+            "message": (
+                f'{attendee["name"]} is already checked in.'
+            )
+        }), 409
+
+
+    # Create unique print job
     job_id = str(uuid.uuid4())
 
 
@@ -116,23 +95,31 @@ def check_in():
     }
 
 
-    # --------------------------------------------------
-    # ADD JOB TO MESSAGE QUEUE
-    # --------------------------------------------------
-
+    # Add job to simulated queue
     print_queue.append(print_job)
 
 
-    # Remember who owns this job
+    # Remember which attendee belongs to the job
     jobs[job_id] = attendee_id
 
 
-    # Attendee is NOT checked in yet.
-    #
-    # We are waiting for printer confirmation.
-
+    # Important: not checked in yet
     attendee["status"] = "PENDING"
     attendee["jobId"] = job_id
+
+
+    # Start fake printer automatically.
+    #
+    # This runs separately, so the /check-in request
+    # can return immediately while printing continues.
+    printer_thread = threading.Thread(
+        target=simulate_printer,
+        args=(job_id,)
+    )
+
+    printer_thread.daemon = True
+
+    printer_thread.start()
 
 
     return jsonify({
@@ -145,7 +132,94 @@ def check_in():
 
 
 # --------------------------------------------------
-# PROCESS NEXT PRINT JOB
+# AUTOMATIC FAKE PRINTER
+# --------------------------------------------------
+
+def simulate_printer(job_id):
+
+    # Pretend the printer takes 3 seconds
+    time.sleep(3)
+
+
+    # Find this exact job in the queue
+    job = None
+
+    for queued_job in print_queue:
+
+        if queued_job["jobId"] == job_id:
+
+            job = queued_job
+            break
+
+
+    # It may already have been manually processed
+    if job is None:
+        return
+
+
+    print_queue.remove(job)
+
+
+    # Create completion webhook payload
+    payload = {
+        "jobId": job["jobId"],
+        "status": "COMPLETED"
+    }
+
+
+    body = json.dumps(payload).encode("utf-8")
+
+
+    # Create valid HMAC signature
+    signature = hmac.new(
+        SECRET,
+        body,
+        hashlib.sha256
+    ).hexdigest()
+
+
+    webhook_request = urllib.request.Request(
+        "http://127.0.0.1:5000/webhook",
+        data=body,
+        method="POST"
+    )
+
+
+    webhook_request.add_header(
+        "Content-Type",
+        "application/json"
+    )
+
+
+    webhook_request.add_header(
+        "X-Signature",
+        signature
+    )
+
+
+    try:
+
+        with urllib.request.urlopen(
+            webhook_request
+        ) as response:
+
+            print(
+                "Automatic printer webhook:",
+                response.status
+            )
+
+
+    except Exception as error:
+
+        print(
+            "Automatic printer webhook failed:",
+            error
+        )
+
+
+# --------------------------------------------------
+# MANUAL NEXT JOB
+# Keep this for testing/debugging
 # --------------------------------------------------
 
 @app.route("/process-next-job", methods=["POST"])
@@ -158,24 +232,17 @@ def process_next_job():
         }), 200
 
 
-    # Take the FIRST waiting job
     job = print_queue.pop(0)
 
 
-    # Create printer completion message
     payload = {
         "jobId": job["jobId"],
         "status": "COMPLETED"
     }
 
 
-    # Convert JSON to bytes
     body = json.dumps(payload).encode("utf-8")
 
-
-    # --------------------------------------------------
-    # SIGN THE WEBHOOK
-    # --------------------------------------------------
 
     signature = hmac.new(
         SECRET,
@@ -183,10 +250,6 @@ def process_next_job():
         hashlib.sha256
     ).hexdigest()
 
-
-    # --------------------------------------------------
-    # SEND WEBHOOK
-    # --------------------------------------------------
 
     webhook_request = urllib.request.Request(
         "http://127.0.0.1:5000/webhook",
@@ -214,9 +277,7 @@ def process_next_job():
         ) as response:
 
             webhook_response = (
-                response
-                .read()
-                .decode()
+                response.read().decode()
             )
 
 
@@ -235,26 +296,14 @@ def process_next_job():
         }), 500
 
 
-# ==================================================
-# NEW: PROCESS A SPECIFIC JOB
-# ==================================================
-#
-# This route allows us to demonstrate that
-# confirmations can arrive OUT OF ORDER.
-#
-# Example:
-#
-# Maya scans first
-# Daniel scans second
-#
-# But we can process Daniel's job FIRST.
-#
-# ==================================================
+# --------------------------------------------------
+# PROCESS SPECIFIC JOB
+# Keep this for out-of-order testing
+# --------------------------------------------------
 
 @app.route("/process-job/<job_id>", methods=["POST"])
 def process_specific_job(job_id):
 
-    # Look for the requested job
     job = None
 
 
@@ -266,10 +315,6 @@ def process_specific_job(job_id):
             break
 
 
-    # --------------------------------------------------
-    # JOB NOT FOUND
-    # --------------------------------------------------
-
     if job is None:
 
         return jsonify({
@@ -277,15 +322,8 @@ def process_specific_job(job_id):
         }), 404
 
 
-    # Remove ONLY this particular job
-    # from the queue.
-
     print_queue.remove(job)
 
-
-    # --------------------------------------------------
-    # CREATE COMPLETION MESSAGE
-    # --------------------------------------------------
 
     payload = {
         "jobId": job["jobId"],
@@ -296,20 +334,12 @@ def process_specific_job(job_id):
     body = json.dumps(payload).encode("utf-8")
 
 
-    # --------------------------------------------------
-    # SIGN THE WEBHOOK
-    # --------------------------------------------------
-
     signature = hmac.new(
         SECRET,
         body,
         hashlib.sha256
     ).hexdigest()
 
-
-    # --------------------------------------------------
-    # CREATE WEBHOOK REQUEST
-    # --------------------------------------------------
 
     webhook_request = urllib.request.Request(
         "http://127.0.0.1:5000/webhook",
@@ -330,10 +360,6 @@ def process_specific_job(job_id):
     )
 
 
-    # --------------------------------------------------
-    # SEND WEBHOOK
-    # --------------------------------------------------
-
     try:
 
         with urllib.request.urlopen(
@@ -341,9 +367,7 @@ def process_specific_job(job_id):
         ) as response:
 
             webhook_response = (
-                response
-                .read()
-                .decode()
+                response.read().decode()
             )
 
 
@@ -362,10 +386,6 @@ def process_specific_job(job_id):
         }), 500
 
 
-# ==================================================
-# NEW: VIEW CURRENT PRINT QUEUE
-# ==================================================
-
 @app.route("/queue", methods=["GET"])
 def get_queue():
 
@@ -373,28 +393,19 @@ def get_queue():
 
 
 # --------------------------------------------------
-# WEBHOOK
+# WEBHOOK CALLBACK
 # --------------------------------------------------
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
 
-    # Get the EXACT request body.
-    #
-    # This is important because the signature
-    # was calculated using these exact bytes.
-
     raw_body = request.get_data()
 
-
-    # Get signature sent by printer
 
     received_signature = request.headers.get(
         "X-Signature"
     )
 
-
-    # Calculate the signature ourselves
 
     expected_signature = hmac.new(
         SECRET,
@@ -403,20 +414,12 @@ def webhook():
     ).hexdigest()
 
 
-    # --------------------------------------------------
-    # VERIFY SIGNATURE
-    # --------------------------------------------------
-
     if received_signature != expected_signature:
 
         return jsonify({
             "error": "Invalid signature"
         }), 401
 
-
-    # --------------------------------------------------
-    # READ WEBHOOK DATA
-    # --------------------------------------------------
 
     data = request.get_json()
 
@@ -426,10 +429,6 @@ def webhook():
     status = data.get("status")
 
 
-    # --------------------------------------------------
-    # CHECK THAT JOB EXISTS
-    # --------------------------------------------------
-
     if job_id not in jobs:
 
         return jsonify({
@@ -437,16 +436,10 @@ def webhook():
         }), 404
 
 
-    # Find attendee belonging to this job
-
     attendee_id = jobs[job_id]
 
     attendee = attendees[attendee_id]
 
-
-    # --------------------------------------------------
-    # PRINTER CONFIRMED COMPLETION
-    # --------------------------------------------------
 
     if status == "COMPLETED":
 
@@ -465,11 +458,6 @@ def webhook():
         "message": "Webhook received, but job is not completed."
     }), 200
 
-
-# --------------------------------------------------
-# GET ONE ATTENDEE
-# --------------------------------------------------
-
 @app.route("/attendees/<attendee_id>", methods=["GET"])
 def get_attendee(attendee_id):
 
@@ -484,21 +472,11 @@ def get_attendee(attendee_id):
         attendees[attendee_id]
     ), 200
 
-
-# --------------------------------------------------
-# GET ALL ATTENDEES
-# --------------------------------------------------
-
 @app.route("/attendees", methods=["GET"])
 def get_attendees():
 
     return jsonify(attendees)
 
-
-# --------------------------------------------------
-# START APPLICATION
-# --------------------------------------------------
-
 if __name__ == "__main__":
 
-    app.run(debug=True)
+    app.run(debug=True, threaded=True)
