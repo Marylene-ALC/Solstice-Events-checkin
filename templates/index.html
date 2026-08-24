@@ -11,7 +11,10 @@
         rel="stylesheet"
         href="{{ url_for('static', filename='style.css') }}"
     >
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
+
 
 <body>
 
@@ -26,10 +29,10 @@
         <div class="checkin-card">
 
             <label for="attendeeId">
-                Attendee ID / QR Code
+                Attendee ID
             </label>
 
-            <input
+       <input
                 id="attendeeId"
                 type="text"
                 placeholder="Example: ATT-001"
@@ -69,8 +72,7 @@
 
     </div>
 
-
-    <script>
+   <script>
 
         async function checkIn() {
 
@@ -80,6 +82,7 @@
                     .value
                     .trim()
                     .toUpperCase();
+
 
             const result =
                 document.getElementById("result");
@@ -119,67 +122,61 @@
                 const data = await response.json();
 
 
+                // ------------------------------------------
+                // NEW CHECK-IN
+                // ------------------------------------------
+
                 if (response.ok) {
 
                     if (data.status === "PENDING") {
 
-                        result.innerHTML = `
-                            <strong>${data.name}</strong>
-
-                            <br><br>
-
-                            ⏳ PENDING
-
-                            <br>
-
-                            ${data.message}
-
-                            <br><br>
-
-                            Waiting for printer confirmation...
-                        `;
+                        showAttendeeResult(
+                            data.name,
+                            attendeeId,
+                            "PENDING",
+                            data.message
+                        );
 
 
-                        // Start checking the attendee's
-                        // latest status every 2 seconds.
                         watchStatus(
                             attendeeId,
                             data.name
                         );
+
                     }
 
                 }
+
+
+                // ------------------------------------------
+                // DUPLICATE / ERROR
+                // ------------------------------------------
 
                 else {
 
                     if (data.status === "PENDING") {
 
-                        result.innerHTML = `
-                            ⚠️ ${data.name}
-                            already has a badge print
-                            in progress.
-
-                            <br><br>
-
-                            Current status:
-                            ${data.status}
-                        `;
+                        showAttendeeResult(
+                            data.name,
+                            attendeeId,
+                            "PENDING",
+                            "Badge printing is already in progress."
+                        );
 
                     }
+
 
                     else if (data.status === "CHECKED_IN") {
 
-                        result.innerHTML = `
-                            ✅ ${data.name}
-                            is already checked in.
-
-                            <br><br>
-
-                            No additional badge
-                            was printed.
-                        `;
+                        showAttendeeResult(
+                            data.name,
+                            attendeeId,
+                            "CHECKED_IN",
+                            "This attendee is already checked in. No additional badge was printed."
+                        );
 
                     }
+
 
                     else {
 
@@ -192,6 +189,7 @@
                 }
 
             }
+
 
             catch (error) {
 
@@ -206,17 +204,94 @@
 
 
 
-        // ------------------------------------------------
-        // WATCH ATTENDEE STATUS
-        // ------------------------------------------------
+        // ==================================================
+        // DISPLAY ATTENDEE + QR CODE
+        // ==================================================
 
-        async function watchStatus(attendeeId, attendeeName) {
+        function showAttendeeResult(
+            attendeeName,
+            attendeeId,
+            status,
+            message
+        ) {
 
             const result =
                 document.getElementById("result");
 
 
+            let statusText = "";
+
+
+            if (status === "PENDING") {
+
+                statusText = `
+                    ⏳ PENDING
+                `;
+
+            }
+
+
+            else if (status === "CHECKED_IN") {
+
+                statusText = `
+                    ✅ CHECKED IN
+                `;
+
+            }
+
+
+            result.innerHTML = `
+
+                <strong class="attendee-name">
+                    ${attendeeName}
+                </strong>
+
+                <br><br>
+
+                <div
+                    id="attendeeQr"
+                    class="attendee-qr"
+                ></div>
+
+                <p class="attendee-code">
+                    ${attendeeId}
+                </p>
+
+                <strong>
+                    ${statusText}
+                </strong>
+
+                <br><br>
+
+                ${message}
+            `;
+
+
+            // Generate this attendee's QR code
+            new QRCode(
+                document.getElementById("attendeeQr"),
+                {
+                    text: attendeeId,
+                    width: 130,
+                    height: 130
+                }
+            );
+
+        }
+
+
+
+        // ==================================================
+        // WATCH STATUS
+        // ==================================================
+
+        async function watchStatus(
+            attendeeId,
+            attendeeName
+  ) {
+
             const timer = setInterval(
+
                 async function () {
 
                     try {
@@ -238,23 +313,17 @@
                             clearInterval(timer);
 
 
-                            result.innerHTML = `
-                                <strong>
-                                    ${attendeeName}
-                                </strong>
-
-                                <br><br>
-
-                                ✅ CHECKED IN
-
-                                <br>
-
-                                Badge printed successfully.
-                            `;
+                            showAttendeeResult(
+                                attendeeName,
+                                attendeeId,
+                                "CHECKED_IN",
+                                "Badge printed successfully."
+                            );
 
                         }
 
                     }
+
 
                     catch (error) {
 
@@ -272,7 +341,7 @@
 
         }
 
-    </script>
+</script>
 
 </body>
 

@@ -108,10 +108,8 @@ def check_in():
     attendee["jobId"] = job_id
 
 
-    # Start fake printer automatically.
-    #
-    # This runs separately, so the /check-in request
-    # can return immediately while printing continues.
+
+    
     printer_thread = threading.Thread(
         target=simulate_printer,
         args=(job_id,)
@@ -131,9 +129,6 @@ def check_in():
     }), 202
 
 
-# --------------------------------------------------
-# AUTOMATIC FAKE PRINTER
-# --------------------------------------------------
 
 def simulate_printer(job_id):
 
@@ -217,11 +212,6 @@ def simulate_printer(job_id):
         )
 
 
-# --------------------------------------------------
-# MANUAL NEXT JOB
-# Keep this for testing/debugging
-# --------------------------------------------------
-
 @app.route("/process-next-job", methods=["POST"])
 def process_next_job():
 
@@ -295,11 +285,6 @@ def process_next_job():
             "error": str(error)
         }), 500
 
-
-# --------------------------------------------------
-# PROCESS SPECIFIC JOB
-# Keep this for out-of-order testing
-# --------------------------------------------------
 
 @app.route("/process-job/<job_id>", methods=["POST"])
 def process_specific_job(job_id):
@@ -391,10 +376,6 @@ def get_queue():
 
     return jsonify(print_queue), 200
 
-
-# --------------------------------------------------
-# WEBHOOK CALLBACK
-# --------------------------------------------------
 
 @app.route("/webhook", methods=["POST"])
 def webhook():

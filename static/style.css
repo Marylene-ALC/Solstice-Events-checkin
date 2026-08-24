@@ -6,25 +6,31 @@ body {
     margin: 0;
     min-height: 100vh;
     font-family: Arial, sans-serif;
-
     display: flex;
     justify-content: center;
     align-items: center;
-
     background: #f3f4f6;
+    padding: 30px 15px;
 }
+
+
+/* -----------------------------
+   MAIN KIOSK
+----------------------------- */
 
 .kiosk {
     width: 460px;
-
+    max-width: 100%;
     background: white;
-
     border-radius: 18px;
-
     padding: 32px;
-
     box-shadow: 0 15px 45px rgba(0, 0, 0, 0.12);
 }
+
+
+/* -----------------------------
+   HEADER
+----------------------------- */
 
 .header {
     text-align: center;
@@ -40,6 +46,11 @@ body {
     color: #666;
 }
 
+
+/* -----------------------------
+   CHECK-IN FORM
+----------------------------- */
+
 .checkin-card label {
     display: block;
     margin-bottom: 8px;
@@ -48,57 +59,128 @@ body {
 
 .checkin-card input {
     width: 100%;
-
     padding: 14px;
-
     border: 1px solid #ccc;
     border-radius: 8px;
-
     font-size: 16px;
-
     margin-bottom: 15px;
 }
 
+.checkin-card input:focus {
+    outline: none;
+    border-color: #555;
+}
+
+
+/* -----------------------------
+   CHECK-IN BUTTON
+----------------------------- */
+
 .checkin-card button {
     width: 100%;
-
     padding: 14px;
-
     border: none;
     border-radius: 8px;
-
     font-size: 16px;
     font-weight: bold;
-
     cursor: pointer;
 }
 
+.checkin-card button:hover {
+    opacity: 0.9;
+}
+
+
+/* -----------------------------
+   RESULT AREA
+----------------------------- */
+
 .result {
     margin-top: 22px;
-
     min-height: 80px;
-
     padding: 18px;
-
     border-radius: 8px;
-
     background: #f7f7f7;
-
     text-align: center;
-
     line-height: 1.7;
 }
 
+
+/* -----------------------------
+   ATTENDEE NAME
+----------------------------- */
+
+.attendee-name {
+    font-size: 20px;
+}
+
+
+/* -----------------------------
+   ATTENDEE QR CODE
+----------------------------- */
+
+.attendee-qr {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 12px 0;
+}
+
+.attendee-qr img,
+.attendee-qr canvas {
+    display: block;
+}
+
+
+/* -----------------------------
+   ATTENDEE ID UNDER QR CODE
+----------------------------- */
+
+.attendee-code {
+    font-weight: bold;
+    margin: 10px 0 15px;
+    color: #444;
+}
+
+
+/* -----------------------------
+   TEST ATTENDEES
+----------------------------- */
+
 .test-attendees {
     margin-top: 30px;
-
     padding-top: 20px;
-
     border-top: 1px solid #ddd;
-
     color: #555;
 }
 
 .test-attendees h3 {
     margin-top: 0;
+}
+
+.test-attendees p {
+    margin: 8px 0;
+}
+
+
+/* -----------------------------
+   MOBILE
+----------------------------- */
+
+@media (max-width: 500px) {
+
+    body {
+        align-items: flex-start;
+        padding: 20px 12px;
+    }
+
+    .kiosk {
+        width: 100%;
+        padding: 24px 20px;
+    }
+
+    .header {
+        margin-bottom: 24px;
+    }
+
 }
